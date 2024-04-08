@@ -1,0 +1,148 @@
+
+/home/mayant/code/js-bugs/ExpoSE/.eslintrc.json
+  0:0  warning  File ignored by default.  Use a negated ignore pattern (like "--ignore-pattern '!<relative/path/to/filename>'") to override
+
+/home/mayant/code/js-bugs/ExpoSE/Distributor/src/Spawn.js
+  101:21  warning  Unnecessary escape character: \/  no-useless-escape
+
+✖ 2 problems (0 errors, 2 warnings)
+
+Building Libs
+Successfully compiled 1 file with Babel (239ms).
+Building Distributor
+Successfully compiled 15 files with Babel (464ms).
+Building Analyser
+Successfully compiled 25 files with Babel (696ms).
+Building into /home/mayant/code/js-bugs/ExpoSE
+Bundling Analyser/bin/Analyser.js into bin/bundle.js
+[+] ExpoSE /home/mayant/code/js-bugs/ExpoSE/async-test.js concurrent: 1 timeout: 7200000 per-test: 2400000
+[-] [0 done /0 queued / 1 running / 0 errors / 0% coverage ] ***[1000D[0K[\] [0 done /0 queued / 1 running / 0 errors / 0% coverage ] ***[!] Built with BASE logging enabled
+[!] Intial Input {"_bound":0}
+sssssssssssssssss input:  { initialInput: { _bound: 0 } }
+Transforming
+[!] ====== ENTERING SCRIPT /home/mayant/code/js-bugs/ExpoSE/async-test.js depth 0 ======
+Transforming
+## BINARY PRE { iid: 58, op: '!==', left: 'number', right: 'undefined' }
+found conditional
+{
+  iid: 24,
+  result: true,
+  stack: 'Error\n' +
+    '    at SymbolicExecution.conditional (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/SymbolicExecution.js:534:16)\n' +
+    '    at Object.C (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:725:37)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/lib/S$/src/symbols.js:61:48\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:233:41\n' +
+    '    at Object.<anonymous> (/home/mayant/code/js-bugs/ExpoSE/async-test.js:33:81)\n' +
+    '    at Module._compile (internal/modules/cjs/loader.js:1063:30)\n' +
+    '    at Object.Module._extensions..js (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/commands/jalangi.js:115:12)\n' +
+    '    at Module.load (internal/modules/cjs/loader.js:928:32)'
+}
+found conditional
+{
+  iid: 8,
+  result: true,
+  stack: 'Error\n' +
+    '    at SymbolicExecution.conditional (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/SymbolicExecution.js:534:16)\n' +
+    '    at Object.C (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:725:37)\n' +
+    '    at Object.rename (/home/mayant/code/js-bugs/ExpoSE/lib/S$/src/symbols.js:16:48)\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:242:41\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/lib/S$/src/symbols.js:62:216\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:233:41'
+}
+## BINARY PRE { iid: 58, op: '!==', left: 'number', right: 'undefined' }
+found conditional
+{
+  iid: 24,
+  result: true,
+  stack: 'Error\n' +
+    '    at SymbolicExecution.conditional (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/SymbolicExecution.js:534:16)\n' +
+    '    at Object.C (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:725:37)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/lib/S$/src/symbols.js:61:48\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:233:41\n' +
+    '    at Object.<anonymous> (/home/mayant/code/js-bugs/ExpoSE/async-test.js:34:85)\n' +
+    '    at Module._compile (internal/modules/cjs/loader.js:1063:30)\n' +
+    '    at Object.Module._extensions..js (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/commands/jalangi.js:115:12)\n' +
+    '    at Module.load (internal/modules/cjs/loader.js:928:32)'
+}
+found conditional
+{
+  iid: 8,
+  result: true,
+  stack: 'Error\n' +
+    '    at SymbolicExecution.conditional (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/SymbolicExecution.js:534:16)\n' +
+    '    at Object.C (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:725:37)\n' +
+    '    at Object.rename (/home/mayant/code/js-bugs/ExpoSE/lib/S$/src/symbols.js:16:48)\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:242:41\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/lib/S$/src/symbols.js:62:216\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:233:41'
+}
+ARRAY CONCAT:  {
+  arguments: [Arguments] { '0': [ 'message' ], '1': [Arguments] { '0': [Array] } }
+}
+## BINARY PRE { iid: 10, op: '<=', left: 0, right: 1 }
+found conditional
+{
+  iid: 8,
+  result: true,
+  stack: 'Error\n' +
+    '    at SymbolicExecution.conditional (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/SymbolicExecution.js:534:16)\n' +
+    '    at Object.C (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:725:37)\n' +
+    '    at myLog (/home/mayant/code/js-bugs/ExpoSE/async-test.js:13:83)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/bin/Models/Helpers.js:70:16\n' +
+    '    at Function.mdl (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/Models/Models.js:27:21)\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:242:41\n' +
+    '    at Object.<anonymous> (/home/mayant/code/js-bugs/ExpoSE/async-test.js:35:75)\n' +
+    '    at Module._compile (internal/modules/cjs/loader.js:1063:30)'
+}
+## BINARY PRE { iid: 18, op: '===', left: undefined, right: 1 }
+found conditional
+{
+  iid: 16,
+  result: false,
+  stack: 'Error\n' +
+    '    at SymbolicExecution.conditional (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/SymbolicExecution.js:534:16)\n' +
+    '    at Object.C (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:725:37)\n' +
+    '    at myLog (/home/mayant/code/js-bugs/ExpoSE/async-test.js:13:47)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/bin/Models/Helpers.js:70:16\n' +
+    '    at Function.mdl (/home/mayant/code/js-bugs/ExpoSE/Analyser/bin/Models/Models.js:27:21)\n' +
+    '    at callFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:196:51)\n' +
+    '    at invokeFun (/home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:217:22)\n' +
+    '    at /home/mayant/code/js-bugs/ExpoSE/Analyser/node_modules/jalangi2/src/js/runtime/analysis.js:242:41\n' +
+    '    at Object.<anonymous> (/home/mayant/code/js-bugs/ExpoSE/async-test.js:35:75)\n' +
+    '    at Module._compile (internal/modules/cjs/loader.js:1063:30)'
+}
+good
+[!] ====== EXITING SCRIPT /home/mayant/code/js-bugs/ExpoSE/async-test.js depth 0 ======
+[!] Finished play with PC 
+[!] Wrote final coverage to /tmp/tmp-7824-WL1P0Lz3HDtA
+sssssssssssssssss this.input in alternatives:  { input: { _bound: 0, X: 0, Y: 1 }, pcLength: 0 }
+[!] Wrote final output to /tmp/tmp-7824-47r4sw36eRzs
+[!] Reading output from  /tmp/tmp-7824-47r4sw36eRzs
+[!] Reading coverage from  /tmp/tmp-7824-WL1P0Lz3HDtA
+[1000D[0K[|] [1 done /0 queued / 0 running / 0 errors / 18% coverage ] ***
+[+] {"_bound":0,"X":0,"Y":1} took 2.333s
+[!] Stats
+[+] General Function Call: 8
+[+] Symbolic Values: 2
+[+] Symbolic Primitives: 2
+[+] Modeled Function Call: {"#concat":1,"#apply":1,"#log":1}
+[!] Done
+[+] /home/mayant/code/js-bugs/ExpoSE/async-test.js. Coverage (Term): 82% Coverage (Decisions): 50% Coverage (LOC): 88% Lines Of Code: 52 -*
+[+] Total Lines Of Code 52
+[+] Total Coverage: 0.875%
+[+] EXPOSE_PRINT_COVERAGE=1 for line by line breakdown
+[+] ExpoSE Finished. 1 paths, 0 errors

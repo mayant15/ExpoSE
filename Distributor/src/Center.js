@@ -136,6 +136,9 @@ class Center {
 		});
 
 		if (errors.length) {
+			console.log(">>>>>>>>>>>>");
+			console.log(errors);
+			console.log(">>>>>>>>>>>>");
 			this._errors += 1;
 		}
 	}
@@ -164,7 +167,6 @@ class Center {
 	}
 
 	_testFile(file) {
-
 		let nextTest = new Spawn(this.options.analyseScript, file, {
 			log: this.options.printPaths,
 			timeout: this.options.testMaxTime,

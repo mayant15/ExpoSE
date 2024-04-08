@@ -55,7 +55,15 @@ export default function(state, ctx, model, helpers) {
 	model.add(String.prototype.substring, substrModel);
 	model.add(String.prototype.slice, symbolicHook(
 		String.prototype.slice,
-		(base, args) => typeof state.getConcrete(base) === "string" && (state.isSymbolic(base) || state.isSymbolic(args[0]) || state.isSymbolic(args[1])),
+		(base, args) => {
+      const res = typeof state.getConcrete(base) === "string" && (state.isSymbolic(base) || state.isSymbolic(args[0]) || state.isSymbolic(args[1]))
+      console.log("### SLICE: ", {
+        shouldRunHook: res,
+        base,
+        args,
+      })
+      return res
+    },
 		(base, args, result) => {
 
 			function relativeIndex(i) {
@@ -105,6 +113,28 @@ export default function(state, ctx, model, helpers) {
 				return new ConcolicValue(result, char_s);
 				}
 				));
+
+  // model.add(String.prototype.charCodeAt, symbolicHook(
+  //   String.prototype.charCodeAt,
+  //   (base, args) => {
+  //     const is_symbolic = (state.isSymbolic(base) || state.isSymbolic(args[0]));
+  //     const is_well_formed = typeof state.getConcrete(base) === "string" && typeof state.getConcrete(args[0]) === "number";
+  //     return is_symbolic && is_well_formed;
+  //   },
+  //   (base, args, result) => {
+  //     const base_s = state.asSymbolic(base);
+  //     const index_s = ctx.mkRealToInt(state.asSymbolic(args[0]));
+  //     const code_s = ctx.mkApp(state.charCodeAt, [base_s, index_s]);
+  //     const cv = new ConcolicValue(result, code_s);
+  //     console.log("## CHAR CODE AT", {
+  //       index_s: index_s.toString(),
+  //       code_s: code_s.toString(),
+  //       cv,
+  //       expr: cv.symbolic.toString(),
+  //     })
+  //     return cv
+  //   }
+  // ));
 
 	model.add(String.prototype.concat, symbolicHook(
       String.prototype.concat,
@@ -210,7 +240,12 @@ export default function(state, ctx, model, helpers) {
 				(base, _a) => state.isSymbolic(base) && typeof(state.getConcrete(base).valueOf()) === "string",
 				(base, _a, result) => {
 				const base_s = state.asSymbolic(base);
-				return new ConcolicValue(result, trimRightSymbolic(base_s));
+				const cv = new ConcolicValue(result, trimRightSymbolic(base_s));
+      console.log("## TRIM RIGHT: ", {
+        base_s: base_s.toString(),
+        cv,
+      })
+      return cv
 				}
 				));
 

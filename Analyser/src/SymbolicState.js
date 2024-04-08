@@ -13,6 +13,7 @@ import { stringify } from "./Utilities/SafeJson";
 import Stats from "Stats";
 import Z3 from "z3javascript";
 import Helpers from "./Models/Helpers";
+// import generatedCharCodeAt from "./charCodeAt";
 
 function BuildUnaryJumpTable(state) {
 	const ctx = state.ctx;
@@ -96,23 +97,36 @@ class SymbolicState {
 		this.whiteLeft = this.ctx.mkRecFunc(this.ctx.mkStringSymbol("str.whiteLeft"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkIntSort());
 		this.whiteRight = this.ctx.mkRecFunc(this.ctx.mkStringSymbol("str.whiteRight"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkIntSort());
 
+		this.charCodeAt = this.ctx.mkFunc(this.ctx.mkStringSymbol("str.charCodeAt"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkIntSort());
+
 		/** Set up trim methods **/
 		this.slv.fromString( 
 			"(define-fun str.isWhite ((c String)) Bool (= c \" \"))\n" + //TODO: Only handles  
 			"(define-fun-rec str.whiteLeft ((s String) (i Int)) Int (if (str.isWhite (str.at s i)) (str.whiteLeft s (+ i 1)) i))\n" +
-      "(define-fun-rec str.whiteRight ((s String) (i Int)) Int (if (str.isWhite (str.at s i)) (str.whiteRight s (- i 1)) i))\n"
+      "(define-fun-rec str.whiteRight ((s String) (i Int)) Int (if (str.isWhite (str.at s i)) (str.whiteRight s (- i 1)) i))\n" 
+			// generatedCharCodeAt 
 		);
 	}
 
 	pushCondition(cnd, binder) {
-		this.pathCondition.push({
+		console.log("analyzer *****************");
+		console.log("pushing path constraint");
+		const newIndex = this.pathCondition.push({
 			ast: cnd,
 			binder: binder || false,
 			forkIid: this.coverage.last()
 		});
+		console.log({
+			cnd: cnd.toPrettyString(),
+			binder: binder || false,
+			index: newIndex - 1,
+			stack: (new Error()).stack
+		});
+		console.log("**************************");
 	}
 
 	conditional(result) {
+		// console.log(Error("found conditional"));
 
 		const result_c = this.getConcrete(result),
 			result_s = this.asSymbolic(result);
@@ -124,6 +138,7 @@ class SymbolicState {
 			Log.logMid(`Concrete result was false, pushing not of ${result_s}`);
 			this.pushCondition(this.ctx.mkNot(result_s));
 		} else {
+			console.log(Error("concretizing"));
 			Log.log("WARNING: Symbolic Conditional on non-bool, concretizing");
 		}
 
@@ -172,15 +187,20 @@ class SymbolicState {
 			pc: this._stringPC(pc),
 			forkIid: this.pathCondition[pcIndex].forkIid
 		});
+		console.log("sssssssssssssssss bound updated. ", {newSoln: solution, input: this.input, pcIndex });
 	}
 
 	_buildPC(childInputs, i, inputCallback) {
 
 		const newPC = this.ctx.mkNot(this.pathCondition[i].ast);
-		const allChecks = this.pathCondition.slice(0, i).reduce((last, next) => last.concat(next.ast.checks), []).concat(newPC.checks);
+		const allChecks = this.pathCondition
+			.slice(0, i)
+			.reduce((last, next) => last.concat(next.ast.checks), [])
+			.concat(newPC.checks);
 
 		Log.logMid(`Checking if ${newPC.simplify().toString()} is satisfiable`);
 
+		console.log("checking sat for index ", i);
 		const solution = this._checkSat(newPC, i, allChecks);
 
 		if (solution) {
@@ -203,8 +223,15 @@ class SymbolicState {
 	alternatives(inputCallback) {
 		let childInputs = [];
 
+		console.log("sssssssssssssssss this.input in alternatives: ", {
+			input: this.input,
+			pcLength: this.pathCondition.length
+		});
+
 		if (this.input._bound > this.pathCondition.length) {
-			throw `Bound ${this.input._bound} > ${this.pathCondition.length}, divergence has occured`;
+			const e = new Error(`Bound ${this.input._bound} > ${this.pathCondition.length}, divergence has occured`);
+			console.log("## DIVERGENCE: ", {input: this.input, stack: e.stack});
+			throw e;
 		}
 
 		//Push all PCs up until bound
@@ -213,7 +240,7 @@ class SymbolicState {
 
 		for (let i = this.input._bound; i < this.pathCondition.length; i++) {
 
-			//TODO: Make checks on expressions smarter
+			// TODO: Make checks on expressions smarter
 			if (!this.pathCondition[i].binder) {
 				this._buildPC(childInputs, i, inputCallback);
 			}
@@ -396,6 +423,9 @@ class SymbolicState {
 
 		const startTime = (new Date()).getTime();
 		let model = (new Z3.Query([clause], checks)).getModel(this.slv);
+
+		console.log("\n********************** model: ", model, "\n");
+
 		const endTime = (new Date()).getTime();
 
 		this.stats.max("Max Queries (Any)", Z3.Query.LAST_ATTEMPTS);
@@ -520,6 +550,13 @@ class SymbolicState {
    */
 	symbolicField(base_c, base_s, field_c, field_s) {
 		this.stats.seen("Symbolic Field");
+		console.log("## FIELD LOOKUP", {
+			base_c,
+			field_c,
+			base_c_type: typeof base_c,
+			field_c_type: typeof field_c,
+			stack: (new Error()).stack,
+		});
 
 		function canHaveFields() {
 			return typeof base_c === "string" || base_c instanceof Array;

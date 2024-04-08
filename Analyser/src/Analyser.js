@@ -34,13 +34,15 @@ J$.analysis = new SymbolicExecution(J$, JSON.parse(input), (state, coverage) => 
 	Log.log("Finished play with PC " + state.pathCondition.map(x => x.ast));
 
 	if (Config.outCoveragePath) {
-		fs.writeFileSync(Config.outCoveragePath, JSON.stringify(coverage.end()));
+		fs.writeFileSync(Config.outCoveragePath, JSON.stringify(coverage.end()), {
+			flush: true
+		});
 		Log.log("Wrote final coverage to " + Config.outCoveragePath);
 	} else {
 		Log.log("No final coverage path supplied");
 	}
 
-	//We record the alternatives list as the results develop to make the output tool more resilient to SMT crashes
+	// We record the alternatives list as the results develop to make the output tool more resilient to SMT crashes
 	state.alternatives((current) => {
 		const finalOut = {
 			pc: state.finalPC(),
@@ -51,7 +53,9 @@ J$.analysis = new SymbolicExecution(J$, JSON.parse(input), (state, coverage) => 
 		};
 
 		if (Config.outFilePath) {
-			fs.writeFileSync(Config.outFilePath, JSON.stringify(finalOut));
+			fs.writeFileSync(Config.outFilePath, JSON.stringify(finalOut), {
+				flush: true
+			});
 			Log.log("Wrote final output to " + Config.outFilePath);
 		} else {
 			Log.log("No final output path supplied");

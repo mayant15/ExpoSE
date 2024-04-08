@@ -3,11 +3,13 @@
 echo "Setting up for Node"
 node --version
 
-echo "Installing top level"
-npm install
+# echo "Installing top level"
+# npm install
+echo "Skipping npm install"
 
-echo "Setting Up Packages"
-./scripts/setup/setup_packages
+# echo "Setting Up Packages"
+# ./scripts/setup/setup_packages
+echo "Skipping package setup"
 
 echo "Building Analyser"
 ./scripts/build/build_all

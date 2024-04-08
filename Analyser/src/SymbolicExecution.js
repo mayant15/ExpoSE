@@ -20,6 +20,7 @@ class SymbolicExecution {
 
 	constructor(sandbox, initialInput, exitFn) {
 		this._sandbox = sandbox;
+		console.log("sssssssssssssssss input: ", {initialInput});
 		this.state = new SymbolicState(initialInput, this._sandbox);
 		this.models = ModelBuilder(this.state);
 		this._fileList = new Array();
@@ -443,6 +444,9 @@ class SymbolicExecution {
 	}
 
 	binaryPre(iid, op, left, right, _isOpAssign, _isSwitchCaseComparison, _isComputed) {
+		console.log("## BINARY PRE", {
+			iid, op, left, right
+		});
  
 		//Don't do symbolic logic if the symbolic values are diff types
 		//Concretise instead
@@ -460,13 +464,25 @@ class SymbolicExecution {
 			const is_same_type = typeof(left_c) === typeof(right_c) || (!is_null && left_c.valueOf() === right_c.valueOf());
 
 			if (!is_same_type || !is_primative || is_null || !is_real) {
+				// +, -, *, /, %, &, |, ^, <<, >>, >>>, <, >, <=, >=, instanceof, delete, in
+				// if (op === "===" || op === "==" || op === "!=" || op === "!===") {
+				// 	return {
+				// 		op: op,
+				// 		left: this.state.toBool(left),
+				// 		right: this.state.toBool(right),
+				// 		skip: true,
+				// 	};
+				// } else {
+				// 	Log.log(`Concretizing binary ${op} on operands of differing types. Type coercion not yet implemented symbolically. (${ObjectHelper.asString(left_c)}, ${ObjectHelper.asString(right_c)}) (${typeof left_c}, ${typeof right_c})`);
+				// 	left = left_c;
+				// 	right = right_c;
+				// }
 				Log.log(`Concretizing binary ${op} on operands of differing types. Type coercion not yet implemented symbolically. (${ObjectHelper.asString(left_c)}, ${ObjectHelper.asString(right_c)}) (${typeof left_c}, ${typeof right_c})`);
 				left = left_c;
 				right = right_c;
 			} else {
 				Log.logHigh("Not concretizing " + op + " " + left + " " + right + " " + typeof left_c + " " + typeof right_c);
 			}
-
 		}
 
 		// Don't evaluate natively when args are symbolic
@@ -517,6 +533,13 @@ class SymbolicExecution {
 	}
 
 	conditional(iid, result) {
+		console.log("found conditional");
+		console.log({iid, result, stack: Error().stack});
+
+		// return {
+		// 	result: this.state.getConcrete(result)
+		// };
+
 		this.state.coverage.touch_cnd(iid, this.state.getConcrete(result)); 
 		Log.logHigh(`Evaluating conditional ${ObjectHelper.asString(result)}`);
 

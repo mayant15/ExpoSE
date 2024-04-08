@@ -76,6 +76,7 @@ class Spawn {
 			}
 		}
 
+		console.log("[!] Reading output from ", this.tmpOutFile.name);
 		fs.readFile(this.tmpOutFile.name, {encoding: "utf8"}, function(err, data) {
 			if (!err) {
 				finalOut = test._tryParse(data, "test data", errors);
@@ -83,6 +84,7 @@ class Spawn {
 			cb(err);
 		});
 
+		console.log("[!] Reading coverage from ", this.tmpCoverageFile.name);
 		fs.readFile(this.tmpCoverageFile.name, {encoding: "utf8"}, function(err, data) {
 			if (!err) {
 				coverage = test._tryParse(data, "coverage data", errors);

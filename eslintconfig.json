@@ -1,0 +1,13 @@
+{
+  "env": {
+    "node": true,
+    "es6": true,
+    "commonjs": true
+  },
+  "parserOptions": {
+    "tokens": true,
+    "comment": true,
+    "loc": true,
+    "range": true
+  }
+}
