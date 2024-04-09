@@ -1,3 +1,11 @@
+# ExpoSE
+
+Fork of the ExpoSE symbolic executor supporting a greater subset of the ECMAScript 2023 specification.
+
+Original readme is preserved below.
+
+---
+
 ## ExpoSE
 
 ExpoSE is a dynamic symbolic execution engine for JavaScript, developed at Royal Holloway, University of London by [Blake Loring](https://www.parsed.uk), Duncan Mitchell, and [Johannes Kinder](https://www.plai.ifi.lmu.de) (now at [LMU Munich](https://www.lmu.de/)).
