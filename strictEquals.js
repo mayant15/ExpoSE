@@ -1,7 +1,7 @@
-const X = require('./lib/S$/src/symbols').symbol('X', 'something')
+const X = require('./lib/S$/src/symbols').symbol('X', 42)
 
 if (X === null) {
   throw Error('')
 } else {
-  console.log('good')
+  // console.log('good')
 }

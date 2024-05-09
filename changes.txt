@@ -1,2 +1,3 @@
 - z3javascript
-  Context.js: filter => next.checks to next?.checks
+  Context.js: filter => next.checks to next?.checks, add mkUninterpretedSort
+  Solver.js: check => return true even for undef

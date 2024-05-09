@@ -426,8 +426,8 @@ class SymbolicExecution {
 	}
 
 	scriptExit(iid, wrappedExceptionVal) {
-		//this.state.coverage.touch(iid);
-		
+		this.state.coverage.touch(iid);
+
 		const originalFileName = this._removeScript();
 		const exitString = `====== EXITING SCRIPT ${originalFileName} depth ${this._scriptDepth()} ======`;
 
@@ -443,40 +443,35 @@ class SymbolicExecution {
 		};
 	}
 
+	_shouldConcretizeBinaryOp(op, left_c, right_c) {
+		// we can handle === of different types
+		if (op === "===") return false;
+
+		//We also consider boxed primitives to be primitive
+		const is_primitive = typeof(left_c) != "object" || (left_c instanceof Number || left_c instanceof String || left_c instanceof Boolean);
+		const is_null = left_c === undefined || right_c === undefined || left_c === null || right_c === null;
+		const is_real = typeof(left_c) == "number" ? (Number.isFinite(left_c) && Number.isFinite(right_c)) : true;
+
+		//TODO: Work out how to check that boxed values are the same type
+		const is_same_type = typeof(left_c) === typeof(right_c) || (!is_null && left_c.valueOf() === right_c.valueOf());
+
+		return !is_same_type || !is_primitive || is_null || !is_real;
+	}
+
 	binaryPre(iid, op, left, right, _isOpAssign, _isSwitchCaseComparison, _isComputed) {
 		console.log("## BINARY PRE", {
 			iid, op, left, right
 		});
- 
+
+		const hasWrappedArgs = this.state.isWrapped(left) || this.state.isWrapped(right);
+
 		//Don't do symbolic logic if the symbolic values are diff types
 		//Concretise instead
-		if (this.state.isWrapped(left) || this.state.isWrapped(right)) {
- 
+		if (hasWrappedArgs) {
 			const left_c  = this.state.getConcrete(left);
 			const right_c = this.state.getConcrete(right);
 
-			//We also consider boxed primitives to be primitive
-			const is_primative = typeof(left_c) != "object" || (left_c instanceof Number || left_c instanceof String || left_c instanceof Boolean);
-			const is_null = left_c === undefined || right_c === undefined || left_c === null || right_c === null;
-			const is_real = typeof(left_c) == "number" ? (Number.isFinite(left_c) && Number.isFinite(right_c)) : true;
-
-			//TODO: Work out how to check that boxed values are the same type
-			const is_same_type = typeof(left_c) === typeof(right_c) || (!is_null && left_c.valueOf() === right_c.valueOf());
-
-			if (!is_same_type || !is_primative || is_null || !is_real) {
-				// +, -, *, /, %, &, |, ^, <<, >>, >>>, <, >, <=, >=, instanceof, delete, in
-				// if (op === "===" || op === "==" || op === "!=" || op === "!===") {
-				// 	return {
-				// 		op: op,
-				// 		left: this.state.toBool(left),
-				// 		right: this.state.toBool(right),
-				// 		skip: true,
-				// 	};
-				// } else {
-				// 	Log.log(`Concretizing binary ${op} on operands of differing types. Type coercion not yet implemented symbolically. (${ObjectHelper.asString(left_c)}, ${ObjectHelper.asString(right_c)}) (${typeof left_c}, ${typeof right_c})`);
-				// 	left = left_c;
-				// 	right = right_c;
-				// }
+			if (this._shouldConcretizeBinaryOp(op, left_c, right_c)) {
 				Log.log(`Concretizing binary ${op} on operands of differing types. Type coercion not yet implemented symbolically. (${ObjectHelper.asString(left_c)}, ${ObjectHelper.asString(right_c)}) (${typeof left_c}, ${typeof right_c})`);
 				left = left_c;
 				right = right_c;
@@ -490,7 +485,7 @@ class SymbolicExecution {
 			op: op,
 			left: left,
 			right: right,
-			skip: this.state.isWrapped(left) || this.state.isWrapped(right)
+			skip: hasWrappedArgs,
 		};
 	}
 
@@ -533,13 +528,6 @@ class SymbolicExecution {
 	}
 
 	conditional(iid, result) {
-		console.log("found conditional");
-		console.log({iid, result, stack: Error().stack});
-
-		// return {
-		// 	result: this.state.getConcrete(result)
-		// };
-
 		this.state.coverage.touch_cnd(iid, this.state.getConcrete(result)); 
 		Log.logHigh(`Evaluating conditional ${ObjectHelper.asString(result)}`);
 

@@ -30,7 +30,6 @@ process.on("disconnect", function() {
 });
 
 J$.analysis = new SymbolicExecution(J$, JSON.parse(input), (state, coverage) => {
-
 	Log.log("Finished play with PC " + state.pathCondition.map(x => x.ast));
 
 	if (Config.outCoveragePath) {

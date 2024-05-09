@@ -184,10 +184,7 @@ export default function(state, ctx, model, helper) {
 	});
 
 	model.add(Array.prototype.keys, NoOp(Array.prototype.keys));
-	model.add(Array.prototype.concat, function() {
-    console.log('ARRAY CONCAT: ', {arguments})
-    NoOp(Array.prototype.concat)(...arguments)
-  });
+	model.add(Array.prototype.concat, NoOp(Array.prototype.concat));
 	model.add(Array.prototype.forEach, NoOp(Array.prototype.forEach)); //TODO: This should only be a no op if the function given as a forEach is not native
 	model.add(Array.prototype.filter, NoOp(Array.prototype.filter)); //TODO: This should only be a no op if the function given as a filter  is not native
 	model.add(Array.prototype.map, NoOp(Array.prototype.map)); // ^^

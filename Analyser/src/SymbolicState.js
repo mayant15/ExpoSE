@@ -13,7 +13,6 @@ import { stringify } from "./Utilities/SafeJson";
 import Stats from "Stats";
 import Z3 from "z3javascript";
 import Helpers from "./Models/Helpers";
-// import generatedCharCodeAt from "./charCodeAt";
 
 function BuildUnaryJumpTable(state) {
 	const ctx = state.ctx;
@@ -65,9 +64,20 @@ class SymbolicState {
 			Config.incrementalSolverEnabled,
 			[
 				{ name: "smt.string_solver", value: Config.stringSolver }, 
-				//				{ name: "timeout", value: Config.maxSolverTime },
+				{ name: "timeout", value: Config.maxSolverTime },
 				{ name: "random_seed", value: Math.floor(Math.random() * Math.pow(2, 32))},
-				{ name: "phase_selection", value: 5 }
+				{ name: "phase_selection", value: 5 },
+				{ name: "global-decls", value: true },
+				{ name: "auto_config", value: false },
+				{ name: "smt.case_split", value: 3 },
+				{ name: "smt.delay_units", value: true },
+				{ name: "type_check", value: true },
+				{ name: "smt.mbqi", value: false},
+				{ name: "pp.bv_literals", value: false},
+				// { name: "smt.qi.eager_threshold", value: 100.0},
+				{ name: "smt.arith.solver", value: 2},
+				{ name: "model.v2", value: true},
+				{ name: "smt.qi.max_multi_patterns", value: 1000}
 			]
 		);
 
@@ -89,23 +99,90 @@ class SymbolicState {
 
 	/** Set up a bunch of SMT functions used by the models **/
 	_setupSmtFunctions() {
-
 		this.stringRepeat = this.ctx.mkRecFunc(this.ctx.mkStringSymbol("str.repeat"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkStringSort());
-
 		this.slv.fromString("(define-fun-rec str.repeat ((a String) (b Int)) String (if (<= b 0) \"\" (str.++ a (str.repeat a (- b 1)))))");
 
 		this.whiteLeft = this.ctx.mkRecFunc(this.ctx.mkStringSymbol("str.whiteLeft"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkIntSort());
 		this.whiteRight = this.ctx.mkRecFunc(this.ctx.mkStringSymbol("str.whiteRight"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkIntSort());
 
-		this.charCodeAt = this.ctx.mkFunc(this.ctx.mkStringSymbol("str.charCodeAt"), [this.ctx.mkStringSort(), this.ctx.mkIntSort()], this.ctx.mkIntSort());
-
 		/** Set up trim methods **/
 		this.slv.fromString( 
-			"(define-fun str.isWhite ((c String)) Bool (= c \" \"))\n" + //TODO: Only handles  
-			"(define-fun-rec str.whiteLeft ((s String) (i Int)) Int (if (str.isWhite (str.at s i)) (str.whiteLeft s (+ i 1)) i))\n" +
+			"(define-fun str.isWhite ((c String)) Bool (= c \" \"))\n" + //  TODO: Only handles 
+      "(define-fun-rec str.whiteLeft ((s String) (i Int)) Int (if (str.isWhite (str.at s i)) (str.whiteLeft s (+ i 1)) i))\n" +
       "(define-fun-rec str.whiteRight ((s String) (i Int)) Int (if (str.isWhite (str.at s i)) (str.whiteRight s (- i 1)) i))\n" 
-			// generatedCharCodeAt 
 		);
+
+		this._setupJsValueDomain();
+		console.log("SOLVER: ", this.slv.toString());
+	}
+
+	_setupJsValueDomain() {
+		this.JSValue = this.ctx.mkUninterpretedSort("JSValue");
+
+		this.Null = this.ctx.mkVar("Null<JSValue>", this.JSValue);
+		this.Undefined = this.ctx.mkVar("Undefined<JSValue>", this.JSValue);
+		this.Number = this.ctx.mkFunc(this.ctx.mkStringSymbol("Number<JSValue>"), [this.ctx.mkIntSort()], this.JSValue);
+		this.Boolean = this.ctx.mkFunc(this.ctx.mkStringSymbol("Boolean<JSValue>"), [this.ctx.mkBoolSort()], this.JSValue);
+
+		this.type = this.ctx.mkFunc(this.ctx.mkStringSymbol("type<Int>"), [this.JSValue], this.ctx.mkIntSort());
+
+		this.isStrictlyEqual = this.ctx.mkFunc(this.ctx.mkStringSymbol("isStrictlyEqual<Bool>"), [this.JSValue, this.JSValue], this.ctx.mkBoolSort());
+
+		const axioms = `
+(declare-sort JSValue 0)
+
+(declare-const Null<JSValue> JSValue)
+(declare-const Undefined<JSValue> JSValue)
+(declare-fun Number<JSValue> (Int) JSValue)
+(declare-fun Boolean<JSValue> (Bool) JSValue)
+(declare-fun type<Int> (JSValue) Int)
+(declare-fun isStrictlyEqual<Bool> (JSValue JSValue) Bool)
+
+(assert (= (type<Int> (as Null<JSValue>  JSValue)) 0))
+(assert (forall ((x JSValue)) (!
+  (=> (= (type<Int> x) 0) (= x (as Null<JSValue>  JSValue)))
+  :pattern ((type<Int> x))
+  )))
+(assert (= (type<Int> (as Undefined<JSValue>  JSValue)) 1))
+(assert (forall ((x JSValue)) (!
+  (=> (= (type<Int> x) 1) (= x (as Undefined<JSValue>  JSValue)))
+  :pattern ((type<Int> x))
+  )))
+(assert (forall ((i Int)) (!
+  (= (type<Int> (Number<JSValue> i)) 2)
+  :pattern ((type<Int> (Number<JSValue> i)))
+  )))
+(assert (forall ((b Bool)) (!
+  (= (type<Int> (Boolean<JSValue> b)) 3)
+  :pattern ((type<Int> (Boolean<JSValue> b)))
+  )))
+(assert (forall ((a JSValue) (b JSValue)) (!
+  (=> (= a b) (= (type<Int> a) (type<Int> b)))
+  :pattern ((type<Int> a) (type<Int> b))
+  )))
+(assert (forall ((a JSValue) (b JSValue)) (!
+  (=>
+    (not (= (type<Int> a) (type<Int> b)))
+    (= (isStrictlyEqual<Bool> a b) false))
+  :pattern ((isStrictlyEqual<Bool> a b))
+  )))
+(assert (forall ((i Int) (j Int)) (!
+  (= (isStrictlyEqual<Bool> (Number<JSValue> i) (Number<JSValue> j)) (= i j))
+  :pattern ((isStrictlyEqual<Bool> (Number<JSValue> i) (Number<JSValue> j)))
+  )))
+(assert (forall ((a Bool) (b Bool)) (!
+  (= (isStrictlyEqual<Bool> (Boolean<JSValue> a) (Boolean<JSValue> b)) (= a b))
+  :pattern ((isStrictlyEqual<Bool> (Boolean<JSValue> a) (Boolean<JSValue> b)))
+  )))
+(assert (=
+  (isStrictlyEqual<Bool> (as Null<JSValue>  JSValue) (as Null<JSValue>  JSValue))
+  true))
+(assert (=
+  (isStrictlyEqual<Bool> (as Undefined<JSValue>  JSValue) (as Undefined<JSValue>  JSValue))
+  true))
+		`;
+
+		this.slv.fromString(axioms);
 	}
 
 	pushCondition(cnd, binder) {
@@ -126,8 +203,6 @@ class SymbolicState {
 	}
 
 	conditional(result) {
-		// console.log(Error("found conditional"));
-
 		const result_c = this.getConcrete(result),
 			result_s = this.asSymbolic(result);
 
@@ -138,7 +213,6 @@ class SymbolicState {
 			Log.logMid(`Concrete result was false, pushing not of ${result_s}`);
 			this.pushCondition(this.ctx.mkNot(result_s));
 		} else {
-			console.log(Error("concretizing"));
 			Log.log("WARNING: Symbolic Conditional on non-bool, concretizing");
 		}
 
@@ -201,7 +275,9 @@ class SymbolicState {
 		Log.logMid(`Checking if ${newPC.simplify().toString()} is satisfiable`);
 
 		console.log("checking sat for index ", i);
+
 		const solution = this._checkSat(newPC, i, allChecks);
+		console.log(solution);
 
 		if (solution) {
 			this._addInput(newPC, solution, i, childInputs);
@@ -239,6 +315,12 @@ class SymbolicState {
 		this.slv.push();
 
 		for (let i = this.input._bound; i < this.pathCondition.length; i++) {
+			// console.log({
+			//   input: this.input,
+			//   pcLen: this.pathCondition.length,
+			//   pc: this.pathCondition[this.pathCondition.length - 1],
+			//   childInputs,
+			// })
 
 			// TODO: Make checks on expressions smarter
 			if (!this.pathCondition[i].binder) {
@@ -258,28 +340,30 @@ class SymbolicState {
 		inputCallback(childInputs);
 	}
 
-	_getSort(concrete) {
-		let sort;
+	_getSort(/* concrete */) {
+		return this.JSValue;
 
-		switch (typeof(concrete)) {
-
-		case "boolean":
-			sort = this.ctx.mkBoolSort();
-			break;
-
-		case "number":
-			sort = this.ctx.mkRealSort();
-			break;
-
-		case "string":
-			sort = this.ctx.mkStringSort();
-			break;
-
-		default:
-			Log.log(`Symbolic input variable of type ${typeof val} not yet supported.`);
-		}
-
-		return sort;
+		// let sort;
+		//
+		// switch (typeof(concrete)) {
+		//
+		// case "boolean":
+		// 	sort = this.ctx.mkBoolSort();
+		// 	break;
+		//
+		// case "number":
+		// 	sort = this.ctx.mkRealSort();
+		// 	break;
+		//
+		// case "string":
+		// 	sort = this.ctx.mkStringSort();
+		// 	break;
+		//
+		// default:
+		// 	Log.log(`Symbolic input variable of type ${typeof val} not yet supported.`);
+		// }
+		//
+		// return sort;
 	}
 
 	_deepConcrete(start, _concreteCount) {
@@ -388,9 +472,9 @@ class SymbolicState {
 			arrayType = typeof(concrete[0]);
 		} else {
 			this.stats.seen("Symbolic Primitives");
-			const sort = this._getSort(concrete);
-			const symbol = this.ctx.mkStringSymbol(name);
-			symbolic = this.ctx.mkConst(symbol, sort);
+			// const sort = this._getSort(concrete);
+			// const symbol = this.ctx.mkStringSymbol(name);
+			symbolic = this.ctx.mkVar(name, this.JSValue);
 		}
 
 		// Use generated input if available
@@ -412,19 +496,22 @@ class SymbolicState {
 		for (let name in this.inputSymbols) {
 			let solutionAst = model.eval(this.inputSymbols[name]);
 			solution[name] = solutionAst.asConstant(model);
+			if (typeof solution[name] === "object") {
+				solution[name] = null; //  TODO: (MM) properly handle nulls and objects
+			}
 			solutionAst.destroy();
 		}
 
 		model.destroy();
+		console.log("SOLUTION: ", {solution});
 		return solution;
 	}
 
-	_checkSat(clause, i, checks) {
+	_checkSat(clause, _i, checks) {
+		console.log("SOLVER: ", this.slv.toString());
 
 		const startTime = (new Date()).getTime();
 		let model = (new Z3.Query([clause], checks)).getModel(this.slv);
-
-		console.log("\n********************** model: ", model, "\n");
 
 		const endTime = (new Date()).getTime();
 
@@ -479,6 +566,10 @@ class SymbolicState {
 		return ConcolicValue.getSymbolic(val) || this.constantSymbol(val);
 	}
 
+	_mkStrictEqual(left_s, right_s) {
+		return this.ctx.mkApp(this.isStrictlyEqual, [left_s, right_s]);
+	}
+
 	_symbolicBinary(op, left_c, left_s, right_c, right_s) {
 		this.stats.seen("Symbolic Binary");
 
@@ -486,6 +577,7 @@ class SymbolicState {
 
 		switch (op) {
 		case "===":
+			throw Error("unreachable");
 		case "==":
 			return this.ctx.mkEq(left_s, right_s);
 		case "!==":
@@ -531,14 +623,29 @@ class SymbolicState {
 		return undefined;
 	}
 
+	_isStrictEqual(op, left, right) {
+		const result_c = SymbolicHelper.evalBinary(op, this.getConcrete(left), this.getConcrete(right));
+		const result_s = this.ctx.mkApp(this.isStrictlyEqual, [this.asSymbolic(left), this.asSymbolic(right)]);
+
+		if (typeof result_s === "undefined") throw Error("unreachable");
+		return new ConcolicValue(result_c, this.ctx.mkEq(this.asSymbolic(left), this.asSymbolic(right)));
+		// return new ConcolicValue(result_c, result_s);
+	}
+
 	/** 
    * Symbolic binary operation, expects two concolic values and an operator
    */
 	binary(op, left, right) {
-    
-		if (typeof this.getConcrete(left) === "string") {
-			right = this.ToString(right);
+		if (op === "===") {
+			return this._isStrictEqual(op, left, right);
 		}
+    
+		//  TODO: (MM) do this cast only where required
+		// if (op === '===') {
+		//   if (typeof this.getConcrete(left) === "string") {
+		//     right = this.ToString(right);
+		//   }
+		// }
 
 		const result_c = SymbolicHelper.evalBinary(op, this.getConcrete(left), this.getConcrete(right));
 		const result_s = this._symbolicBinary(op, this.getConcrete(left), this.asSymbolic(left), this.getConcrete(right), this.asSymbolic(right));
@@ -550,14 +657,7 @@ class SymbolicState {
    */
 	symbolicField(base_c, base_s, field_c, field_s) {
 		this.stats.seen("Symbolic Field");
-		console.log("## FIELD LOOKUP", {
-			base_c,
-			field_c,
-			base_c_type: typeof base_c,
-			field_c_type: typeof field_c,
-			stack: (new Error()).stack,
-		});
-
+		
 		function canHaveFields() {
 			return typeof base_c === "string" || base_c instanceof Array;
 		}
@@ -683,6 +783,9 @@ class SymbolicState {
 			return this.ctx.mkNumeral("" + val, this.ctx.mkRealSort());
 		case "string":
 			return this.ctx.mkString(val.toString());
+		case "object":
+			if (val === null) return this.Null;
+			throw Error("TODO: Object literal");
 		default:
 			Log.log("Symbolic expressions with " + typeof(val) + " literals not yet supported.");
 		}

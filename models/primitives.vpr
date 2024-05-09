@@ -1,0 +1,94 @@
+domain JSValue {
+    function Null(): JSValue
+    function Undefined(): JSValue
+    function Number(i: Int): JSValue
+    function Boolean(b: Bool): JSValue
+
+    // ------------------------------------------------------------------------
+    
+    function type(val: JSValue): Int
+
+    axiom { type(Null()) == 0 }
+    axiom { forall x: JSValue :: {type(x)} type(x) == 0 ==> x == Null() }
+    axiom { type(Undefined()) == 1 }
+    axiom { forall x: JSValue :: {type(x)} type(x) == 1 ==> x == Undefined() }
+    axiom { forall i: Int :: type(Number(i)) == 2 }
+    axiom { forall b: Bool :: type(Boolean(b)) == 3 }
+    axiom { forall a: JSValue, b : JSValue :: a == b ==> type(a) == type(b) }
+
+    // ------------------------------------------------------------------------
+
+    // function isNull(val: JSValue): Bool
+    // function isNumber(val: JSValue): Bool
+    // function isBoolean(val: JSValue): Bool
+    // function isUndefined(val: JSValue): Bool
+
+    // axiom { forall x: JSValue :: {isNull(x)} isNull(x) == (type(x) == 0) }
+    // axiom { forall x: JSValue :: isUndefined(x) == (type(x) == 1) }
+    // axiom { forall x: JSValue :: isNumber(x) == (type(x) == 2) }
+    // axiom { forall x: JSValue :: isBoolean(x) == (type(x) == 3) }
+
+    // ------------------------------------------------------------------------
+    // https://262.ecma-international.org/#sec-isstrictlyequal
+
+    function isStrictlyEqual(a: JSValue, b: JSValue): Bool
+
+    axiom { forall a: JSValue, b: JSValue :: {isStrictlyEqual(a, b)} type(a) != type(b) ==> isStrictlyEqual(a, b) == false }
+    axiom { forall i: Int, j: Int :: isStrictlyEqual(Number(i), Number(j)) == (i == j) }
+    axiom { forall a: Bool, b: Bool :: isStrictlyEqual(Boolean(a), Boolean(b)) == (a == b) }
+    axiom { isStrictlyEqual(Null(), Null()) == true }
+    axiom { isStrictlyEqual(Undefined(), Undefined()) == true }
+
+    // ------------------------------------------------------------------------
+    // https://262.ecma-international.org/#sec-islooselyequal
+    // TODO: https://262.ecma-international.org/#sec-IsHTMLDDA-internal-slot-aec
+
+    // function isLooselyEqual(a: JSValue, b: JSValue): Bool
+
+    // axiom { forall a: JSValue, b: JSValue :: {isLooselyEqual(a, b)} type(a) == type(b) ==> isLooselyEqual(a, b) == isStrictlyEqual(a, b) }
+    // axiom { isLooselyEqual(Null(), Undefined()) == true }
+    // axiom { isLooselyEqual(Undefined(), Null()) == true }
+    // axiom { forall a: Bool, b: JSValue :: {isLooselyEqual(Boolean(a), b)} isLooselyEqual(Boolean(a), b) == isLooselyEqual(Number(a ? 1 : 0), b) }
+    // axiom { forall a: JSValue, b: Bool :: {isLooselyEqual(a, Boolean(b))} isLooselyEqual(a, Boolean(b)) == isLooselyEqual(a, Number(b ? 1 : 0)) }
+    
+    // ------------------------------------------------------------------------
+}
+
+method test(x: JSValue) {
+    assert x != Null()
+}
+
+// method test() {
+//     assert !false
+// }
+
+// method testStrictEquals(x: JSValue) {
+//     assert forall y: JSValue :: isStrictlyEqual(y, Null()) ==> y == Null()
+//     // assert !isStrictlyEqual(x, Null())
+// }
+
+// method test() {
+//     assert isStrictlyEqual(Null(), Null())
+//     assert isStrictlyEqual(Undefined(), Undefined())
+
+//     assert !isStrictlyEqual(Number(0), Number(1))
+//     assert isStrictlyEqual(Number(0), Number(0))
+
+//     assert !isStrictlyEqual(Number(0), Boolean(true))
+//     assert !isStrictlyEqual(Boolean(false), Boolean(true))
+//     assert isStrictlyEqual(Boolean(false), Boolean(false))
+// }
+
+// method testIsLooselyEqual() {
+//     assert isLooselyEqual(Null(), Null())
+//     assert isLooselyEqual(Null(), Undefined())
+//     assert isLooselyEqual(Undefined(), Null())
+//     assert isLooselyEqual(Undefined(), Undefined())
+
+//     assert !isLooselyEqual(Number(42), Boolean(true))
+//     assert !isLooselyEqual(Number(42), Boolean(false))
+//     assert isLooselyEqual(Number(1), Boolean(true))
+//     assert !isLooselyEqual(Number(1), Boolean(false))
+//     assert !isLooselyEqual(Number(0), Boolean(true))
+//     assert isLooselyEqual(Number(0), Boolean(false))
+// }
