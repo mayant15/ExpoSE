@@ -76,65 +76,16 @@
 (declare-const x@1@01 JSValue)
 (set-option :timeout 0)
 (push) ; 1
+
 ; State saturation: after contract
 (set-option :timeout 50)
 (check-sat)
 ; unknown
 (set-option :timeout 0)
 
-(assert (= x@1@01 Null<JSValue>))
+(assert (isStrictlyEqual<Bool> x@1@01 Null<JSValue>))
 (check-sat)
 (get-info :reason-unknown)
 (get-model)
-
-; (push) ; 2
-; 
-; (push) ; 3
-; 
-; (assert (not (not (= x@1@01 (as Null<JSValue>  JSValue)))))
-; (check-sat)
-; ; unknown
-; (get-model)
-; 
-; (pop) ; 3
-
-; (set-option :timeout 10)
-; (check-sat)
-; 
-; (set-option :timeout 0)
-; (push) ; 3
-; (assert (not (not (= x@1@01 (as Null<JSValue>  JSValue)))))
-; (check-sat)
-; (get-model)
-; 
-; (pop) ; 3
-; 
-; (set-option :timeout 10)
-; (check-sat)
-; (set-option :timeout 0)
-; 
-; (push) ; 3
-; 
-; (assert (not (not (= x@1@01 (as Null<JSValue>  JSValue)))))
-; (check-sat)
-; ; unknown
-; (get-model)
-; 
-; (pop) ; 3
-; 
-; (set-option :timeout 10)
-; (check-sat)
-; (set-option :timeout 0)
-; 
-; (push) ; 3
-; 
-; (assert (not (not (= x@1@01 (as Null<JSValue>  JSValue)))))
-; (check-sat)
-; ; unknown
-; (get-model)
-; 
-; (pop) ; 3
-
-; (pop) ; 2
 
 (pop) ; 1

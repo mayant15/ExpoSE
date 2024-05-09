@@ -628,8 +628,7 @@ class SymbolicState {
 		const result_s = this.ctx.mkApp(this.isStrictlyEqual, [this.asSymbolic(left), this.asSymbolic(right)]);
 
 		if (typeof result_s === "undefined") throw Error("unreachable");
-		return new ConcolicValue(result_c, this.ctx.mkEq(this.asSymbolic(left), this.asSymbolic(right)));
-		// return new ConcolicValue(result_c, result_s);
+		return new ConcolicValue(result_c, result_s);
 	}
 
 	/** 
