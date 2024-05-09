@@ -136,9 +136,6 @@ class Center {
 		});
 
 		if (errors.length) {
-			console.log(">>>>>>>>>>>>");
-			console.log(errors);
-			console.log(">>>>>>>>>>>>");
 			this._errors += 1;
 		}
 	}

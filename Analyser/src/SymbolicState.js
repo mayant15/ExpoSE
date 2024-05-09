@@ -113,7 +113,6 @@ class SymbolicState {
 		);
 
 		this._setupJsValueDomain();
-		console.log("SOLVER: ", this.slv.toString());
 	}
 
 	_setupJsValueDomain() {
@@ -261,7 +260,6 @@ class SymbolicState {
 			pc: this._stringPC(pc),
 			forkIid: this.pathCondition[pcIndex].forkIid
 		});
-		console.log("sssssssssssssssss bound updated. ", {newSoln: solution, input: this.input, pcIndex });
 	}
 
 	_buildPC(childInputs, i, inputCallback) {
@@ -299,11 +297,6 @@ class SymbolicState {
 	alternatives(inputCallback) {
 		let childInputs = [];
 
-		console.log("sssssssssssssssss this.input in alternatives: ", {
-			input: this.input,
-			pcLength: this.pathCondition.length
-		});
-
 		if (this.input._bound > this.pathCondition.length) {
 			const e = new Error(`Bound ${this.input._bound} > ${this.pathCondition.length}, divergence has occured`);
 			console.log("## DIVERGENCE: ", {input: this.input, stack: e.stack});
@@ -315,12 +308,6 @@ class SymbolicState {
 		this.slv.push();
 
 		for (let i = this.input._bound; i < this.pathCondition.length; i++) {
-			// console.log({
-			//   input: this.input,
-			//   pcLen: this.pathCondition.length,
-			//   pc: this.pathCondition[this.pathCondition.length - 1],
-			//   childInputs,
-			// })
 
 			// TODO: Make checks on expressions smarter
 			if (!this.pathCondition[i].binder) {
@@ -340,30 +327,8 @@ class SymbolicState {
 		inputCallback(childInputs);
 	}
 
-	_getSort(/* concrete */) {
+	_getSort() {
 		return this.JSValue;
-
-		// let sort;
-		//
-		// switch (typeof(concrete)) {
-		//
-		// case "boolean":
-		// 	sort = this.ctx.mkBoolSort();
-		// 	break;
-		//
-		// case "number":
-		// 	sort = this.ctx.mkRealSort();
-		// 	break;
-		//
-		// case "string":
-		// 	sort = this.ctx.mkStringSort();
-		// 	break;
-		//
-		// default:
-		// 	Log.log(`Symbolic input variable of type ${typeof val} not yet supported.`);
-		// }
-		//
-		// return sort;
 	}
 
 	_deepConcrete(start, _concreteCount) {
@@ -472,8 +437,6 @@ class SymbolicState {
 			arrayType = typeof(concrete[0]);
 		} else {
 			this.stats.seen("Symbolic Primitives");
-			// const sort = this._getSort(concrete);
-			// const symbol = this.ctx.mkStringSymbol(name);
 			symbolic = this.ctx.mkVar(name, this.JSValue);
 		}
 
@@ -503,16 +466,12 @@ class SymbolicState {
 		}
 
 		model.destroy();
-		console.log("SOLUTION: ", {solution});
 		return solution;
 	}
 
 	_checkSat(clause, _i, checks) {
-		console.log("SOLVER: ", this.slv.toString());
-
 		const startTime = (new Date()).getTime();
 		let model = (new Z3.Query([clause], checks)).getModel(this.slv);
-
 		const endTime = (new Date()).getTime();
 
 		this.stats.max("Max Queries (Any)", Z3.Query.LAST_ATTEMPTS);
@@ -564,10 +523,6 @@ class SymbolicState {
 
 	asSymbolic(val) {
 		return ConcolicValue.getSymbolic(val) || this.constantSymbol(val);
-	}
-
-	_mkStrictEqual(left_s, right_s) {
-		return this.ctx.mkApp(this.isStrictlyEqual, [left_s, right_s]);
 	}
 
 	_symbolicBinary(op, left_c, left_s, right_c, right_s) {
@@ -656,7 +611,7 @@ class SymbolicState {
    */
 	symbolicField(base_c, base_s, field_c, field_s) {
 		this.stats.seen("Symbolic Field");
-		
+
 		function canHaveFields() {
 			return typeof base_c === "string" || base_c instanceof Array;
 		}

@@ -20,7 +20,6 @@ class SymbolicExecution {
 
 	constructor(sandbox, initialInput, exitFn) {
 		this._sandbox = sandbox;
-		console.log("sssssssssssssssss input: ", {initialInput});
 		this.state = new SymbolicState(initialInput, this._sandbox);
 		this.models = ModelBuilder(this.state);
 		this._fileList = new Array();
@@ -458,11 +457,7 @@ class SymbolicExecution {
 		return !is_same_type || !is_primitive || is_null || !is_real;
 	}
 
-	binaryPre(iid, op, left, right, _isOpAssign, _isSwitchCaseComparison, _isComputed) {
-		console.log("## BINARY PRE", {
-			iid, op, left, right
-		});
-
+	binaryPre(_iid, op, left, right, _isOpAssign, _isSwitchCaseComparison, _isComputed) {
 		const hasWrappedArgs = this.state.isWrapped(left) || this.state.isWrapped(right);
 
 		//Don't do symbolic logic if the symbolic values are diff types
