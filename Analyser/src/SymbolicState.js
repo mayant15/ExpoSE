@@ -14,6 +14,12 @@ import Stats from "Stats";
 import Z3 from "z3javascript";
 import Helpers from "./Models/Helpers";
 
+const NULL_TAG = 0;
+const UNDEFINED_TAG = 1;
+const NUMBER_TAG = 2;
+const BOOLEAN_TAG = 3;
+const TYPE_ERROR_TAG = 4;
+
 function BuildUnaryJumpTable(state) {
 	const ctx = state.ctx;
 	return {
@@ -123,20 +129,41 @@ class SymbolicState {
 		this.Number = this.ctx.mkFunc(this.ctx.mkStringSymbol("Number<JSValue>"), [this.ctx.mkIntSort()], this.JSValue);
 		this.Boolean = this.ctx.mkFunc(this.ctx.mkStringSymbol("Boolean<JSValue>"), [this.ctx.mkBoolSort()], this.JSValue);
 
+		this.toNumber = this.ctx.mkFunc(this.ctx.mkStringSymbol("toNumber<Int>"), [this.JSValue], this.ctx.mkIntSort());
+		this.toBoolean = this.ctx.mkFunc(this.ctx.mkStringSymbol("tooBoolean<Bool>"), [this.JSValue], this.ctx.mkBoolSort());
+
 		this.type = this.ctx.mkFunc(this.ctx.mkStringSymbol("type<Int>"), [this.JSValue], this.ctx.mkIntSort());
 
 		this.isStrictlyEqual = this.ctx.mkFunc(this.ctx.mkStringSymbol("isStrictlyEqual<Bool>"), [this.JSValue, this.JSValue], this.ctx.mkBoolSort());
+		this.addition = this.ctx.mkFunc(this.ctx.mkStringSymbol("addition<JSValue>"), [this.JSValue, this.JSValue], this.JSValue);
+
+		this.TypeError = this.ctx.mkVar("TypeError<JSValue>", this.JSValue);
 
 		const axioms = `
 (declare-sort JSValue 0)
-
 (declare-const Null<JSValue> JSValue)
 (declare-const Undefined<JSValue> JSValue)
+(declare-const TypeError<JSValue> JSValue)
 (declare-fun Number<JSValue> (Int) JSValue)
 (declare-fun Boolean<JSValue> (Bool) JSValue)
 (declare-fun type<Int> (JSValue) Int)
+(declare-fun toNumber<Int> (JSValue) Int)
+(declare-fun toBoolean<Bool> (JSValue) Bool)
+(declare-fun addition<JSValue> (JSValue JSValue) JSValue)
 (declare-fun isStrictlyEqual<Bool> (JSValue JSValue) Bool)
 
+(assert (forall ((i Int) (j Int)) (!
+  (=> (= (Number<JSValue> i) (Number<JSValue> j)) (= i j))
+  :pattern ((Number<JSValue> i) (Number<JSValue> j))
+  )))
+(assert (forall ((i Bool) (j Bool)) (!
+  (=> (= (Boolean<JSValue> i) (Boolean<JSValue> j)) (= i j))
+  :pattern ((Boolean<JSValue> i) (Boolean<JSValue> j))
+  )))
+(assert (forall ((x JSValue)) (!
+  (and (>= (type<Int> x) 0) (<= (type<Int> x) 4))
+  :pattern ((type<Int> x))
+  )))
 (assert (= (type<Int> (as Null<JSValue>  JSValue)) 0))
 (assert (forall ((x JSValue)) (!
   (=> (= (type<Int> x) 0) (= x (as Null<JSValue>  JSValue)))
@@ -151,13 +178,56 @@ class SymbolicState {
   (= (type<Int> (Number<JSValue> i)) 2)
   :pattern ((type<Int> (Number<JSValue> i)))
   )))
+(assert (forall ((x JSValue)) (!
+  (=>
+    (= (type<Int> x) 2)
+    (exists ((i Int)) (!
+      (= x (Number<JSValue> i))
+      :pattern ((Number<JSValue> i))
+      )))
+  :pattern ((type<Int> x))
+  )))
 (assert (forall ((b Bool)) (!
   (= (type<Int> (Boolean<JSValue> b)) 3)
   :pattern ((type<Int> (Boolean<JSValue> b)))
   )))
+(assert (forall ((x JSValue)) (!
+  (=>
+    (= (type<Int> x) 3)
+    (exists ((b Bool)) (!
+      (= x (Boolean<JSValue> b))
+      :pattern ((Boolean<JSValue> b))
+      )))
+  :pattern ((type<Int> x))
+  )))
 (assert (forall ((a JSValue) (b JSValue)) (!
   (=> (= a b) (= (type<Int> a) (type<Int> b)))
   :pattern ((type<Int> a) (type<Int> b))
+  )))
+(assert (= (type<Int> (as TypeError<JSValue>  JSValue)) 4))
+(assert (forall ((x JSValue)) (!
+  (=> (= (type<Int> x) 4) (= x (as TypeError<JSValue>  JSValue)))
+  :pattern ((type<Int> x))
+  )))
+(assert (forall ((i Int)) (!
+  (= (toNumber<Int> (Number<JSValue> i)) i)
+  :pattern ((toNumber<Int> (Number<JSValue> i)))
+  )))
+(assert (forall ((b Bool)) (!
+  (= (toBoolean<Bool> (Boolean<JSValue> b)) b)
+  :pattern ((toBoolean<Bool> (Boolean<JSValue> b)))
+  )))
+(assert (forall ((x Int) (y Int)) (!
+  (=
+    (addition<JSValue> (Number<JSValue> x) (Number<JSValue> y))
+    (Number<JSValue> (+ x y)))
+  :pattern ((addition<JSValue> (Number<JSValue> x) (Number<JSValue> y)))
+  )))
+(assert (forall ((x JSValue) (y JSValue)) (!
+  (=>
+    (or (not (= (type<Int> x) 2)) (not (= (type<Int> y) 2)))
+    (= (addition<JSValue> x y) (as TypeError<JSValue>  JSValue)))
+  :pattern ((addition<JSValue> x y))
   )))
 (assert (forall ((a JSValue) (b JSValue)) (!
   (=>
@@ -179,7 +249,7 @@ class SymbolicState {
 (assert (=
   (isStrictlyEqual<Bool> (as Undefined<JSValue>  JSValue) (as Undefined<JSValue>  JSValue))
   true))
-		`;
+`;
 
 		this.slv.fromString(axioms);
 	}
@@ -423,7 +493,7 @@ class SymbolicState {
 		this.stats.seen("Symbolic Values");
 
 		//TODO: Very ugly short circuit
-		if (!(concrete instanceof Array) && typeof concrete === "object") {
+		if (!(concrete instanceof Array) && typeof concrete === "object" && concrete !== null) {
 			return new SymbolicObject(name);
 		}
 
@@ -452,16 +522,52 @@ class SymbolicState {
 		Log.logMid(`Initializing fresh symbolic variable ${symbolic} using concrete value ${concrete}`);
 		return new ConcolicValue(concrete, symbolic, arrayType);
 	}
+  
+	_getTypeFromModel(model, expr) {
+		const tagExpr = model.eval(this.ctx.mkApp(this.type, [expr]));
+		const tag = tagExpr.asConstant(model);
+		console.log("---- RETURN TAG: ", {tag, tagExpr});
+		return tag;
+	}
+
+	_getNumberFromModel(model, expr) {
+		const numExpr = model.eval(this.ctx.mkApp(this.toNumber, [expr]));
+		const num = numExpr.asConstant(model);
+		console.log("---- RETURN NUM: ", {num, numExpr});
+		return num;
+	}
+
+	_getBooleanFromModel(model, expr) {
+		const boolExpr = model.eval(this.ctx.mkApp(this.toBoolean, [expr]));
+		const bool = boolExpr.asConstant(model);
+		console.log("---- RETURN BOOL: ", {bool, boolExpr});
+		return bool;
+	}
+
+	_getValueFromModel(model, expr) {
+		let type = this._getTypeFromModel(model, expr);
+		switch (type) {
+		case NULL_TAG:
+			return null;
+		case UNDEFINED_TAG:
+			return undefined;
+		case NUMBER_TAG:
+			return this._getNumberFromModel(model, expr);
+		case BOOLEAN_TAG:
+			return this._getBooleanFromModel(model, expr);
+
+		case TYPE_ERROR_TAG: //  TODO: (MM) better handling for these errors
+		default:
+			throw TypeError("invalid type returned from model");
+		}
+	}
 
 	getSolution(model) {
 		let solution = {};
 
 		for (let name in this.inputSymbols) {
 			let solutionAst = model.eval(this.inputSymbols[name]);
-			solution[name] = solutionAst.asConstant(model);
-			if (typeof solution[name] === "object") {
-				solution[name] = null; //  TODO: (MM) properly handle nulls and objects
-			}
+			solution[name] = this._getValueFromModel(model, solutionAst);
 			solutionAst.destroy();
 		}
 
@@ -586,12 +692,22 @@ class SymbolicState {
 		return new ConcolicValue(result_c, result_s);
 	}
 
+	_addition(op, left, right) {
+		const result_c = SymbolicHelper.evalBinary(op, this.getConcrete(left), this.getConcrete(right));
+		const result_s = this.ctx.mkApp(this.addition, [this.asSymbolic(left), this.asSymbolic(right)]);
+
+		if (typeof result_s === "undefined") throw Error("unreachable");
+		return new ConcolicValue(result_c, result_s);
+	}
+
 	/** 
    * Symbolic binary operation, expects two concolic values and an operator
    */
 	binary(op, left, right) {
 		if (op === "===") {
 			return this._isStrictEqual(op, left, right);
+		} else if (op === "+") {
+			return this._addition(op, left, right);
 		}
     
 		//  TODO: (MM) do this cast only where required
@@ -734,7 +850,8 @@ class SymbolicState {
 		case "boolean":
 			return val ? this.ctx.mkTrue() : this.ctx.mkFalse();
 		case "number":
-			return this.ctx.mkNumeral("" + val, this.ctx.mkRealSort());
+			return this.ctx.mkApp(this.Number, [this.ctx.mkNumeral("" + val, this.ctx.mkIntSort())]);
+			// return this.ctx.mkNumeral("" + val, this.ctx.mkRealSort());
 		case "string":
 			return this.ctx.mkString(val.toString());
 		case "object":

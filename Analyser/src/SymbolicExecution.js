@@ -445,6 +445,7 @@ class SymbolicExecution {
 	_shouldConcretizeBinaryOp(op, left_c, right_c) {
 		// we can handle === of different types
 		if (op === "===") return false;
+		if (op === "+" && typeof left_c === "number" && typeof right_c === "number") return false;
 
 		//We also consider boxed primitives to be primitive
 		const is_primitive = typeof(left_c) != "object" || (left_c instanceof Number || left_c instanceof String || left_c instanceof Boolean);

@@ -3,30 +3,44 @@ domain JSValue {
     function Undefined(): JSValue
     function Number(i: Int): JSValue
     function Boolean(b: Bool): JSValue
+    function TypeError(): JSValue
+
+    axiom {forall i: Int, j: Int :: {Number(i), Number(j)} Number(i) == Number(j) ==> i == j}
+    axiom {forall i: Bool, j: Bool :: {Boolean(i), Boolean(j)} Boolean(i) == Boolean(j) ==> i == j}
 
     // ------------------------------------------------------------------------
     
     function type(val: JSValue): Int
+
+    axiom { forall x: JSValue :: {type(x)} type(x) >= 0 && type(x) <= 4 }
 
     axiom { type(Null()) == 0 }
     axiom { forall x: JSValue :: {type(x)} type(x) == 0 ==> x == Null() }
     axiom { type(Undefined()) == 1 }
     axiom { forall x: JSValue :: {type(x)} type(x) == 1 ==> x == Undefined() }
     axiom { forall i: Int :: type(Number(i)) == 2 }
+    axiom { forall x: JSValue :: {type(x)} type(x) == 2 ==> exists i: Int :: x == Number(i) }
     axiom { forall b: Bool :: type(Boolean(b)) == 3 }
+    axiom { forall x: JSValue :: {type(x)} type(x) == 3 ==> exists b: Bool :: x == Boolean(b) }
     axiom { forall a: JSValue, b : JSValue :: a == b ==> type(a) == type(b) }
+    axiom { type(TypeError()) == 4 }
+    axiom { forall x: JSValue :: {type(x)} type(x) == 4 ==> x == TypeError() }
+
+    // ------------------------------------------------------------------------
+    // Utility functions to extract data out of a JSValue. Type mismatches are
+    // not defined (TODO)
+
+    function toNumber(val: JSValue): Int
+    axiom { forall i: Int :: {toNumber(Number(i))} toNumber(Number(i)) == i }
+
+    function toBoolean(val: JSValue): Bool
+    axiom { forall b: Bool :: {toBoolean(Boolean(b))} toBoolean(Boolean(b)) == b }
 
     // ------------------------------------------------------------------------
 
-    // function isNull(val: JSValue): Bool
-    // function isNumber(val: JSValue): Bool
-    // function isBoolean(val: JSValue): Bool
-    // function isUndefined(val: JSValue): Bool
-
-    // axiom { forall x: JSValue :: {isNull(x)} isNull(x) == (type(x) == 0) }
-    // axiom { forall x: JSValue :: isUndefined(x) == (type(x) == 1) }
-    // axiom { forall x: JSValue :: isNumber(x) == (type(x) == 2) }
-    // axiom { forall x: JSValue :: isBoolean(x) == (type(x) == 3) }
+    function addition(x: JSValue, y: JSValue): JSValue
+    axiom { forall x: Int, y: Int :: {addition(Number(x), Number(y))} addition(Number(x), Number(y)) == Number(x + y) }
+    axiom { forall x: JSValue, y: JSValue :: {addition(x, y)} (type(x) != 2 || type(y) != 2) ==> addition(x, y) == TypeError() }
 
     // ------------------------------------------------------------------------
     // https://262.ecma-international.org/#sec-isstrictlyequal
@@ -54,9 +68,32 @@ domain JSValue {
     // ------------------------------------------------------------------------
 }
 
-method test(x: JSValue) {
-    assert x != Null()
+// method test_addition(x: JSValue) {
+//     assert isStrictlyEqual(addition(x, Number(3)), Number(45)) ==> x == Number(42)
+//     // assert isStrictlyEqual(addition(x, Number(3)), Number(45))
+// }
+
+method test_strict_equals(x: JSValue) {
+    assert !isStrictlyEqual(x, Null())
+    // assert x == Null()
+    // assert isStrictlyEqual(x, Null()) ==> x == Null()
+    // assert isStrictlyEqual(Undefined(), x) ==> x == Undefined()
 }
+
+// method test_strict_equals_null(x: JSValue) {
+//     assert isStrictlyEqual(x, Null()) ==> x == Null()
+// }
+
+// method test_strict_equals(x: JSValue) {
+//     assert isStrictlyEqual(Number(1), Number(1))
+//     assert isStrictlyEqual(Boolean(true), Boolean(true))
+//     assert !isStrictlyEqual(Boolean(false), Boolean(true))
+//     assert !isStrictlyEqual(Boolean(true), Boolean(false))
+//     assert isStrictlyEqual(Boolean(false), Boolean(false))
+//     assert !isStrictlyEqual(Boolean(true), Number(1))
+
+//     //  TODO: (MM) NaN, +Infinity, -Infinity, MAX_VALUE, MIN_VALUE, +0, -0
+// }
 
 // method test() {
 //     assert !false
