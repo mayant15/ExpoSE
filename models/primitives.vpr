@@ -68,16 +68,12 @@ domain JSValue {
     // ------------------------------------------------------------------------
 }
 
-// method test_addition(x: JSValue) {
-//     assert isStrictlyEqual(addition(x, Number(3)), Number(45)) ==> x == Number(42)
-//     // assert isStrictlyEqual(addition(x, Number(3)), Number(45))
-// }
+method test_addition(x: JSValue) {
+    assert isStrictlyEqual(addition(x, Number(3)), Number(45)) ==> x == Number(42)
+}
 
-method test_strict_equals(x: JSValue) {
-    assert !isStrictlyEqual(x, Null())
-    // assert x == Null()
-    // assert isStrictlyEqual(x, Null()) ==> x == Null()
-    // assert isStrictlyEqual(Undefined(), x) ==> x == Undefined()
+method test_strict_equals() {
+    assert forall x: JSValue :: isStrictlyEqual(x, Null()) ==> x == Null()
 }
 
 // method test_strict_equals_null(x: JSValue) {
