@@ -1,13 +1,15 @@
-from z3 import Solver, DeclareSort, Function, Consts, IntSort, BoolSort, Implies, ForAll, MultiPattern, unknown, And, Or, Exists, Not, OnClause, set_param, unsat, Const
+from z3 import (
+        Solver, DeclareSort, Function, Consts, IntSort, BoolSort, Implies,
+        ForAll, MultiPattern, unknown, And, Or, Exists, Not, OnClause, unsat,
+        set_param, StringSort, StringVal, Concat
+)
 
-print_logs = False
-# add_null = True
-# add_undef = True
-# add_number = True
-# add_boolean = True
-# add_string = False
-# add_strictEq = True
-# add_plus = True
+############################################################################
+# Config
+
+print_proof_logs = False
+enable_strict_eq_tests = True
+enable_plus_tests = True
 
 ############################################################################
 # Definitions
@@ -17,10 +19,17 @@ Null, Undefined, TypeError_ = Consts(['Null', 'Undefined', 'TypeError'], JSValue
 type_ = Function('type', JSValue, IntSort())
 Number = Function('Number', IntSort(), JSValue)
 Boolean = Function('Boolean', BoolSort(), JSValue)
+String = Function('JString', StringSort(), JSValue)
+
+
+def RawStr(s):
+    return String(StringVal(s))
+
 
 i, j = Consts('i j', IntSort())
 x, y = Consts('x y', JSValue)
-b, c = Consts('a b', BoolSort())
+b, c = Consts('b c', BoolSort())
+s0, s1 = Consts('s0 s1', StringSort())
 
 axioms = []
 
@@ -38,7 +47,7 @@ def log_instance(pr, arg1, arg2):
 s = Solver()
 s.set(":mbqi", False)
 s.set(":auto_config", False)
-if print_logs:
+if print_proof_logs:
     set_param(proof=True)
     onc = OnClause(s, print)
 
@@ -67,6 +76,7 @@ def ert(expr):
         print()
     s.pop()
 
+
 ############################################################################
 # AXIOMS
 ############################################################################
@@ -77,60 +87,144 @@ axiom(ForAll([i, j], Implies(Number(i) == Number(j), i == j), patterns=[
     ]))
 
 # Injective for Boolean
-b, c = Consts('b c', BoolSort())
 axiom(ForAll([b, c], Implies(Boolean(b) == Boolean(c), b == c), patterns=[
     MultiPattern(Boolean(b), Boolean(c))
+    ]))
+
+# Injective for String
+axiom(ForAll([s0, s1], Implies(String(s0) == String(s1), s0 == s1), patterns=[
+    MultiPattern(String(s0), String(s1))
     ]))
 
 ############################################################################
 # Type tag for values
 
-# type(x) \in {0, 1, 2, 3, 4}
+NULL_TAG = 0
+UNDEFINED_TAG = 1
+NUMBER_TAG = 2
+BOOLEAN_TAG = 3
+STRING_TAG = 4
+TYPE_ERROR_TAG = 5
+
+# type(x) \in {0, 1, 2, 3, 4, 5}
 x, y = Consts('x y', JSValue)
-axiom(ForAll(x, And(type_(x) >= 0, type_(x) <= 4), patterns=[type_(x)]))
+axiom(ForAll(x, And(type_(x) >= 0, type_(x) <= 5), patterns=[type_(x)]))
 
 #  forall x: JSValue :: {type(x)} type(x) == 0 <==> x == Null
-axiom(ForAll(x, (type_(x) == 0) == (x == Null), patterns=[type_(x)]))
+axiom(ForAll(x, (type_(x) == NULL_TAG) == (x == Null), patterns=[type_(x)]))
 
 #  forall x: JSValue :: {type(x)} type(x) == 1 <==> x == Undefined
-axiom(ForAll(x, (type_(x) == 1) == (x == Undefined), patterns=[type_(x)]))
+axiom(ForAll(x, (type_(x) == UNDEFINED_TAG) == (x == Undefined), patterns=[type_(x)]))
 
 # forall i: Int :: {type(Number(i))} type(Number(i)) == 2
 # forall x: JSValue :: {type(x)} type(x) == 2 ==> exists i: Int :: x == Number(i)
-axiom(ForAll(i, type_(Number(i)) == 2, patterns=[type_(Number(i))]))
-axiom(ForAll(x, Implies(type_(x) == 2, Exists(i, x == Number(i))), patterns=[type_(x)]))
+axiom(ForAll(i, type_(Number(i)) == NUMBER_TAG, patterns=[type_(Number(i))]))
+axiom(ForAll(x, Implies(type_(x) == NUMBER_TAG, Exists(i, x == Number(i))), patterns=[type_(x)]))
 
 # type(x) == 3 iff x is a Boolean
-axiom(ForAll(b, type_(Boolean(b)) == 3, patterns=[type_(Boolean(b))]))
-axiom(ForAll(x, Implies(type_(x) == 3, Exists(b, x == Boolean(b))), patterns=[type_(x)]))
+axiom(ForAll(b, type_(Boolean(b)) == BOOLEAN_TAG, patterns=[type_(Boolean(b))]))
+axiom(ForAll(x, Implies(type_(x) == BOOLEAN_TAG, Exists(b, x == Boolean(b))), patterns=[type_(x)]))
 
-# type(x) == 4 iff x == TypeError()
-axiom(ForAll(x, (type_(x) == 4) == (x == TypeError_), patterns=[type_(x)]))
+# type(x) == 4 iff x is a String
+axiom(ForAll(s0, type_(String(s0)) == STRING_TAG, patterns=[type_(String(s0))]))
+axiom(ForAll(x, Implies(type_(x) == STRING_TAG, Exists(s0, x == String(s0))), patterns=[type_(x)]))
+
+# type(x) == 5 iff x == TypeError()
+axiom(ForAll(x, (type_(x) == 5) == (x == TypeError_), patterns=[type_(x)]))
 
 ############################################################################
-# Utility functions to extract values out of the model. Type mismatches are
-# not defined (TODO)
+# Type coercion functions
 
-toNumber = Function('toNumber', JSValue, IntSort())
-toBoolean = Function('toBoolean', JSValue, BoolSort())
+toBoolean = Function('ToBoolean', JSValue, BoolSort())
 
-axiom(ForAll(i, toNumber(Number(i)) == i, patterns=[toNumber(Number(i))]))
 axiom(ForAll(b, toBoolean(Boolean(b)) == b, patterns=[toBoolean(Boolean(b))]))
 
 ############################################################################
-# `+` operator
+# https://tc39.es/ecma262/#sec-tonumber
+# ToNumber
 
-plus = Function('addition', JSValue, JSValue, JSValue)
+ToNumber = Function('ToNumber', JSValue, IntSort())
+
+axiom(ForAll(i, ToNumber(Number(i)) == i, patterns=[ToNumber(Number(i)), Number(i)]))
+axiom(ToNumber(Undefined) == 0)  #  TODO: This should be NaN
+axiom(ToNumber(Null) == 0)
+axiom(ToNumber(Boolean(False)) == 0)
+axiom(ToNumber(Boolean(True)) == 1)
+axiom(ToNumber(TypeError_) == -1)
+axiom(ForAll(s0, ToNumber(String(s0)) == -1, patterns=[
+    ToNumber(String(s0)),
+    String(s0)
+    ]))
+
+#  NOTE: String to number conversion is undefined
+
+############################################################################
+# https://tc39.es/ecma262/#sec-tostring
+# ToString
+
+#  TODO: Do I need two ToString functions? One that's JSValue -> StringSort
+#  and another one that's JSValue -> JSValue
+ToString = Function('ToString', JSValue, StringSort())
+
+axiom(ForAll(s0, ToString(String(s0)) == s0, patterns=[ToString(String(s0))]))
+axiom(ToString(Null) == StringVal("null"))
+axiom(ToString(Undefined) == StringVal("undefined"))
+axiom(ToString(Boolean(True)) == StringVal("true"))
+axiom(ToString(Boolean(False)) == StringVal("false"))
+
+#  NOTE: Number to string conversion is undefined
+
+
+############################################################################
+# https://tc39.es/ecma262/#sec-applystringornumericbinaryoperator
+# `+` operator
+#  TODO: Will have to model ToPrimitive at some point because that's where we
+#  get "[Object object]" from. Not modelling custom type coercion overrides for
+#  now like Symbol.toPrimitive or Object.prototype.valueOf
+
+plus = Function('plus', JSValue, JSValue, JSValue)
+
+# If either argument is a string, perform string concatenation
+#  NOTE: I can do this on type(), or I can do this pattern matched on String(s)
+
+# forall x, y : JSValue :: {plus(x, y)} (type(x) == STRING_TAG || type(y) == STRING_TAG) ==> (plus(x, y) ==
+# String(Concat(ToString(x), ToString(y)))
+axiom(ForAll([x, y], Implies(
+    Or(type_(x) == STRING_TAG, type_(y) == STRING_TAG),
+    plus(x, y) == String(Concat(ToString(x), ToString(y)))
+    ), patterns=[
+        plus(x, y)
+        ]))
+
+#  TODO: Handle TypeError or throw
+axiom(ForAll([x, y], Implies(
+    And(type_(x) != STRING_TAG, type_(y) != STRING_TAG),
+    plus(x, y) == Number(ToNumber(x) + ToNumber(y))
+    ), patterns=[plus(x, y)]))
 
 # Works as expected with numbers
-axiom(ForAll([i, j], plus(Number(i), Number(j)) == Number(i + j), patterns=[
-    plus(Number(i), Number(j))
-    ]))
+# axiom(ForAll([i, j], plus(Number(i), Number(j)) == Number(i + j), patterns=[
+#     plus(Number(i), Number(j))
+#     ]))
+# axiom(ForAll([x, y], Implies(
+#     Or(type_(x) == 2, type_(y) == 2),
+#     plus(x, y) == Number(ToNumber(x) + ToNumber(y))
+#     ), patterns=[plus(x, y)]))
+
+# Works as expected with strings
+# axiom(ForAll([s0, s1], plus(String(s0), String(s1)) == String(Concat(s0, s1)), patterns=[
+#     plus(String(s0), String(s1))
+#     ]))
+
+# axiom(ForAll([x, y], Implies(
+#     Or(type_(x) == 4, type_(y) == 4),
+#     plus(x, y) == String(Concat(ToString(x), ToString(y)))
+#     ), patterns=[plus(x, y)]))
 
 # TypeError if any one the inputs is not a number
-axiom(ForAll([x, y], Implies(Or(type_(x) != 2, type_(y) != 2), plus(x, y) == TypeError_), patterns=[
-    plus(x, y)
-    ]))
+# axiom(ForAll([x, y], Implies(Or(type_(x) != 2, type_(y) != 2), plus(x, y) == TypeError_), patterns=[
+#     plus(x, y)
+#     ]))
 
 ############################################################################
 # https://262.ecma-international.org/#sec-isstrictlyequal
@@ -158,38 +252,83 @@ axiom(ForAll([b, c], strictEqual(Boolean(b), Boolean(c)) == (b == c), patterns=[
     strictEqual(Boolean(b), Boolean(c))
     ]))
 
+# For two strings, x === y iff their string values are the same
+axiom(ForAll([s0, s1], strictEqual(String(s0), String(s1)) == (s0 == s1), patterns=[
+    strictEqual(String(s0), String(s1))
+    ]))
+
 ############################################################################
 # TESTS
 ############################################################################
 
 s.add(axioms)
 
-# === for null
-ert(ForAll(x, Implies(strictEqual(x, Null), x == Null), patterns=[
-    strictEqual(x, Null)
-    ]))
-ert(strictEqual(Null, Null))
+############################################################################
+# strictEqual
 
-# === for undefined
-ert(ForAll(x, Implies(strictEqual(x, Undefined), x == Undefined), patterns=[
-    strictEqual(x, Undefined)
-    ]))
-ert(strictEqual(Undefined, Undefined))
+if enable_strict_eq_tests:
+    # === for null
+    ert(ForAll(x, Implies(strictEqual(x, Null), x == Null), patterns=[
+        strictEqual(x, Null)
+        ]))
+    ert(strictEqual(Null, Null))
 
-# === for numbers
-ert(strictEqual(Number(1), Number(1)))
-ert(strictEqual(Number(0), Number(0)))
-ert(Not(strictEqual(Number(1), Number(4))))
-ert(Implies(strictEqual(plus(x, Number(3)), Number(45)), x == Number(42)))
+    # === for undefined
+    ert(ForAll(x, Implies(strictEqual(x, Undefined), x == Undefined), patterns=[
+        strictEqual(x, Undefined)
+        ]))
+    ert(strictEqual(Undefined, Undefined))
 
-# === for booleans
-ert(strictEqual(Boolean(True), Boolean(True)))
-ert(Not(strictEqual(Boolean(False), Boolean(True))))
-ert(Not(strictEqual(Boolean(True), Boolean(False))))
-ert(strictEqual(Boolean(False), Boolean(False)))
+    # === for numbers
+    ert(strictEqual(Number(1), Number(1)))
+    ert(strictEqual(Number(0), Number(0)))
+    ert(Not(strictEqual(Number(1), Number(4))))
 
-# === for differing types
-ert(Not(strictEqual(Boolean(True), Number(1))))
+    # === for booleans
+    ert(strictEqual(Boolean(True), Boolean(True)))
+    ert(Not(strictEqual(Boolean(False), Boolean(True))))
+    ert(Not(strictEqual(Boolean(True), Boolean(False))))
+    ert(strictEqual(Boolean(False), Boolean(False)))
+
+    # === for strings
+    ert(strictEqual(RawStr("abc"), RawStr("abc")))
+    ert(Not(strictEqual(RawStr("abc"), RawStr("ab"))))
+
+    # === for differing types
+    ert(Not(strictEqual(Boolean(True), Number(1))))
+    ert(Not(strictEqual(Boolean(True), RawStr("abc"))))
+
+############################################################################
+# plus
+
+if enable_plus_tests:
+    # + gives you either number or string
+    ert(ForAll([x, y], Or(type_(plus(x, y)) == NUMBER_TAG, type_(plus(x, y)) == STRING_TAG)))
+
+    # Do some basic arithmetic
+    ert(Implies(strictEqual(plus(x, Number(3)), Number(45)), x == Number(42)))
+
+    # null + null is 0
+    ert(plus(Null, Null) == Number(0))
+
+    # null + i is i
+    ert(plus(Null, Number(42)) == Number(42))
+
+    # null + "abc" is "nullabc"
+    ert(plus(Null, RawStr("abc")) == RawStr("nullabc"))
+
+    # undefined + "abc" is "undefinedabc"
+    ert(plus(Undefined, RawStr("abc")) == RawStr("undefinedabc"))
+
+    # "abc" + true is "abctrue"
+    ert(plus(RawStr("abc"), Boolean(True)) == RawStr("abctrue"))
+
+    # "abc" + false is "abcfalse"
+    ert(plus(RawStr("abc"), Boolean(False)) == RawStr("abcfalse"))
+
+
+############################################################################
+# end.
 
 print(f"[{passed}/{total}] passed")
 if passed == total:
