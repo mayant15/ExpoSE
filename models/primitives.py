@@ -1,7 +1,7 @@
 from z3 import (
         Solver, DeclareSort, Function, Consts, IntSort, BoolSort, Implies,
         ForAll, MultiPattern, unknown, And, Or, Exists, Not, OnClause, unsat,
-        set_param, StringSort, StringVal, Concat
+        set_param, StringSort, StringVal, Concat, BoolVal
 )
 
 ############################################################################
@@ -150,13 +150,14 @@ axiom(ToNumber(Undefined) == 0)  #  TODO: This should be NaN
 axiom(ToNumber(Null) == 0)
 axiom(ToNumber(Boolean(False)) == 0)
 axiom(ToNumber(Boolean(True)) == 1)
-axiom(ToNumber(TypeError_) == -1)
-axiom(ForAll(s0, ToNumber(String(s0)) == -1, patterns=[
-    ToNumber(String(s0)),
-    String(s0)
-    ]))
-
-#  NOTE: String to number conversion is undefined
+# axiom(ForAll(i, ToNumber(Number(i)) != ToNumber(TypeError_), patterns=[
+#     ToNumber(Number(i)),
+#     ]))
+# axiom(ToNumber(TypeError_) == -1)
+# axiom(ForAll(s0, ToNumber(String(s0)) == -1, patterns=[
+#     ToNumber(String(s0)),
+#     String(s0)
+#     ]))
 
 ############################################################################
 # https://tc39.es/ecma262/#sec-tostring
@@ -172,8 +173,12 @@ axiom(ToString(Undefined) == StringVal("undefined"))
 axiom(ToString(Boolean(True)) == StringVal("true"))
 axiom(ToString(Boolean(False)) == StringVal("false"))
 
-#  NOTE: Number to string conversion is undefined
+############################################################################
+#  NOTE: string->number and number->string conversions are not precisely
+#  defined besides these two axioms
 
+axiom(ForAll(i, ToNumber(String(ToString(Number(i)))) == i))
+axiom(ForAll(s0, ToString(Number(ToNumber(String(s0)))) == s0)) #  TODO: Parse number from string can fail
 
 ############################################################################
 # https://tc39.es/ecma262/#sec-applystringornumericbinaryoperator
@@ -201,30 +206,6 @@ axiom(ForAll([x, y], Implies(
     And(type_(x) != STRING_TAG, type_(y) != STRING_TAG),
     plus(x, y) == Number(ToNumber(x) + ToNumber(y))
     ), patterns=[plus(x, y)]))
-
-# Works as expected with numbers
-# axiom(ForAll([i, j], plus(Number(i), Number(j)) == Number(i + j), patterns=[
-#     plus(Number(i), Number(j))
-#     ]))
-# axiom(ForAll([x, y], Implies(
-#     Or(type_(x) == 2, type_(y) == 2),
-#     plus(x, y) == Number(ToNumber(x) + ToNumber(y))
-#     ), patterns=[plus(x, y)]))
-
-# Works as expected with strings
-# axiom(ForAll([s0, s1], plus(String(s0), String(s1)) == String(Concat(s0, s1)), patterns=[
-#     plus(String(s0), String(s1))
-#     ]))
-
-# axiom(ForAll([x, y], Implies(
-#     Or(type_(x) == 4, type_(y) == 4),
-#     plus(x, y) == String(Concat(ToString(x), ToString(y)))
-#     ), patterns=[plus(x, y)]))
-
-# TypeError if any one the inputs is not a number
-# axiom(ForAll([x, y], Implies(Or(type_(x) != 2, type_(y) != 2), plus(x, y) == TypeError_), patterns=[
-#     plus(x, y)
-#     ]))
 
 ############################################################################
 # https://262.ecma-international.org/#sec-isstrictlyequal
@@ -306,7 +287,20 @@ if enable_plus_tests:
     ert(ForAll([x, y], Or(type_(plus(x, y)) == NUMBER_TAG, type_(plus(x, y)) == STRING_TAG)))
 
     # Do some basic arithmetic
-    ert(Implies(strictEqual(plus(x, Number(3)), Number(45)), x == Number(42)))
+    # ert(Implies(strictEqual(plus(x, Number(3)), Number(45)), x == Number(42)))
+
+    ert(Implies(strictEqual(plus(x, Number(3)), Number(45)), ToNumber(x) == 42))
+
+    ert(Implies(strictEqual(plus(x, Number(3)), Number(45)), Or(
+        type_(x) == NUMBER_TAG,
+        type_(x) == TYPE_ERROR_TAG,
+        )))
+
+    ert(Implies(ToNumber(x) == 42, Or(
+        type_(x) == NUMBER_TAG,
+        type_(x) == STRING_TAG,
+        type_(x) == TYPE_ERROR_TAG,
+        )))
 
     # null + null is 0
     ert(plus(Null, Null) == Number(0))

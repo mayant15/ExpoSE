@@ -1,6 +1,5 @@
 (set-option :smt.mbqi false)
 (set-option :smt.auto-config false)
-(set-option :smt.qi.profile true)
 
 (declare-sort JSValue 0)
 (declare-fun type (JSValue) Int)
@@ -27,8 +26,6 @@
 (push)
 
 (assert (and (IsStrictlyEqual y0 Null) (= y0 Null)))
-
-; (assert (=> (IsStrictlyEqual y0 Null) (= y0 Null)))
 
 (check-sat)
 (get-info :reason-unknown)
